@@ -161,9 +161,9 @@ def mock_summary(summary_input: Dict[str, Any]) -> Dict[str, Any]:
     anom_count = summary_input.get("anomaly_count", 0)
     
     risk_level = "low"
-    if anom_count > 5:
+    if anom_count > 3:
         risk_level = "high"
-    elif anom_count > 1:
+    elif anom_count > 0:
         risk_level = "medium"
         
     narrative = f"The transaction analysis covers a total of {summary_input.get('total_count', 0)} transactions. "
