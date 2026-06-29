@@ -183,6 +183,78 @@ curl "http://localhost:8000/jobs/7ac148c3-4dbe-47be-a5e2-6cf2153b6cb5/status"
 ```bash
 curl "http://localhost:8000/jobs/7ac148c3-4dbe-47be-a5e2-6cf2153b6cb5/results"
 ```
+**Response**:
+```json
+{
+  "job": {
+    "id": "7ac148c3-4dbe-47be-a5e2-6cf2153b6cb5",
+    "filename": "transactions.csv",
+    "status": "completed",
+    "row_count_raw": 6,
+    "row_count_clean": 5,
+    "created_at": "2026-06-29T12:00:00",
+    "completed_at": "2026-06-29T12:00:15",
+    "error_message": null,
+    "summary": {
+      "total_spend_inr": 10982.55,
+      "total_spend_usd": 2536.35,
+      "top_merchants": [
+        {"merchant": "Flipkart", "spend": 10882.55, "count": 1},
+        {"merchant": "Zomato", "spend": 2536.35, "count": 1}
+      ],
+      "anomaly_count": 1,
+      "narrative": "The spending analysis covers 5 clean transactions...",
+      "risk_level": "medium"
+    }
+  },
+  "transactions": [
+    {
+      "id": 1,
+      "job_id": "7ac148c3-4dbe-47be-a5e2-6cf2153b6cb5",
+      "txn_id": "TXN1065",
+      "date": "2024-09-04",
+      "merchant": "Flipkart",
+      "amount": 10882.55,
+      "currency": "INR",
+      "status": "SUCCESS",
+      "category": "Shopping",
+      "account_id": "ACC003",
+      "is_anomaly": false,
+      "anomaly_reason": null,
+      "llm_category": null,
+      "llm_raw_response": null,
+      "llm_failed": false,
+      "notes": "Refund expected"
+    },
+    {
+      "id": 4,
+      "job_id": "7ac148c3-4dbe-47be-a5e2-6cf2153b6cb5",
+      "txn_id": "TXN1021",
+      "date": "2024-02-17",
+      "merchant": "Zomato",
+      "amount": 2536.35,
+      "currency": "USD",
+      "status": "SUCCESS",
+      "category": "Food",
+      "account_id": "ACC001",
+      "is_anomaly": false,
+      "anomaly_reason": null,
+      "llm_category": "Food",
+      "llm_raw_response": "[{\"index\": 0, \"category\": \"Food\"}]",
+      "llm_failed": false,
+      "notes": "Verified"
+    }
+  ],
+  "category_spend_breakdown": {
+    "Shopping": {
+      "INR": 10882.55
+    },
+    "Food": {
+      "USD": 2536.35
+    }
+  }
+}
+```
 
 ### 4. List All Jobs
 ```bash
