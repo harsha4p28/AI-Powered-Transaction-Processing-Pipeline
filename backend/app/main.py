@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI, UploadFile, File, Depends, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from uuid import UUID
 from .database import get_db, engine, Base
@@ -69,8 +69,25 @@ async def upload_transactions(
     db.commit()
     db.refresh(db_job)
 
-    # Dispatch Celery background task
-    process_transaction_job.delay(str(db_job.id), csv_content)
+    # Save file to temporary local storage
+    import os
+    upload_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "temp_uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    file_path = os.path.join(upload_dir, f"{db_job.id}.csv")
+    
+    try:
+        with open(file_path, "wb") as f:
+            f.write(content)
+    except Exception as e:
+        db.delete(db_job)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save uploaded file locally: {str(e)}"
+        )
+
+    # Dispatch Celery background task with file path
+    process_transaction_job.delay(str(db_job.id), file_path)
 
     return {"job_id": db_job.id, "status": db_job.status}
 
@@ -81,7 +98,7 @@ def get_job_status(job_id: UUID, db: Session = Depends(get_db)):
     Return the current status of the job: pending, processing, completed, or failed.
     If completed, also include a summary field with high-level stats.
     """
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = db.query(Job).options(joinedload(Job.summary)).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -96,7 +113,7 @@ def get_job_results(job_id: UUID, db: Session = Depends(get_db)):
     Return the full structured output: cleaned transactions list, flagged anomalies,
     per-category spend breakdown, and the LLM-generated narrative summary.
     """
-    job = db.query(Job).filter(Job.id == job_id).first()
+    job = db.query(Job).options(joinedload(Job.summary)).filter(Job.id == job_id).first()
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

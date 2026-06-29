@@ -23,10 +23,17 @@ celery_app.conf.update(
 )
 
 @celery_app.task(name="process_transaction_job")
-def process_transaction_job(job_id: str, csv_content: str):
-    logger.info(f"Celery task received for job {job_id}")
+def process_transaction_job(job_id: str, file_path: str):
+    logger.info(f"Celery task received for job {job_id} with file {file_path}")
     db = SessionLocal()
     try:
+        import os
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Uploaded file not found at path: {file_path}")
+            
+        with open(file_path, "r", encoding="utf-8") as f:
+            csv_content = f.read()
+            
         job = db.query(Job).filter(Job.id == job_id).first()
         if not job:
             logger.error(f"Job {job_id} not found in database.")
@@ -49,3 +56,10 @@ def process_transaction_job(job_id: str, csv_content: str):
         return False
     finally:
         db.close()
+        import os
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                logger.info(f"Cleaned up temporary file: {file_path}")
+        except Exception as cleanup_err:
+            logger.error(f"Failed to clean up temporary file {file_path}: {str(cleanup_err)}")
