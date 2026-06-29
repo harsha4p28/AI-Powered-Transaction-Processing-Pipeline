@@ -88,3 +88,23 @@ TXN1006,24-03-2024,IRCTC,1000.00,INR,FAILED,Travel,ACC001,Refund expected
     assert summary.anomaly_count == 1
     assert summary.risk_level == "medium"  # 1 anomaly -> medium risk
     assert summary.total_spend_inr > 0
+
+    # Verify llm_raw_response is populated
+    assert isinstance(zomato_tx.llm_raw_response, str)
+    assert len(zomato_tx.llm_raw_response) > 0
+
+    # Verify category spend breakdown calculation logic
+    category_spend_breakdown = {}
+    for tx in transactions:
+        if tx.status == "SUCCESS" and tx.amount is not None:
+            cat = tx.category or "Uncategorised"
+            curr = tx.currency or "INR"
+            amt = tx.amount
+            if cat not in category_spend_breakdown:
+                category_spend_breakdown[cat] = {}
+            category_spend_breakdown[cat][curr] = category_spend_breakdown[cat].get(curr, 0) + amt
+            
+    assert "Food" in category_spend_breakdown
+    assert category_spend_breakdown["Food"]["INR"] == Decimal("100.00")
+    assert "Shopping" in category_spend_breakdown
+    assert category_spend_breakdown["Shopping"]["INR"] == Decimal("10882.55")
