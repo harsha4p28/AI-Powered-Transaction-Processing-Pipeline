@@ -55,6 +55,7 @@ class JobStatusResponse(BaseModel):
 class JobResultsResponse(BaseModel):
     job: JobStatusResponse
     transactions: List[TransactionResponse]
+    category_spend_breakdown: Optional[Any] = None
 
     model_config = ConfigDict(from_attributes=True)
 

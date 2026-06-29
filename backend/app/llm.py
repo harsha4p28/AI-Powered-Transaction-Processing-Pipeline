@@ -44,16 +44,18 @@ def call_gemini_with_retry(prompt: str, response_json: bool = False, max_retries
             time.sleep(delay)
             delay *= 2  # Exponential backoff
 
-def classify_transactions_batch(transactions: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+from typing import Tuple
+
+def classify_transactions_batch(transactions: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], str]:
     """
     Classify a batch of transactions using Gemini or fallback rules.
     Input format: [{"index": int, "merchant": str, "notes": str, "amount": float, "currency": str}]
-    Returns: [{"index": int, "category": str}]
+    Returns: (list of [{"index": int, "category": str}], raw_response_str)
     """
     valid_categories = {"Food", "Shopping", "Travel", "Transport", "Utilities", "Cash Withdrawal", "Entertainment", "Other"}
     
     if not has_api_key:
-        return mock_classify(transactions, valid_categories)
+        return mock_classify(transactions, valid_categories), "Mock classifier (No API Key)"
         
     prompt = f"""
     You are an expert financial transaction classifier.
@@ -68,6 +70,7 @@ def classify_transactions_batch(transactions: List[Dict[str, Any]]) -> List[Dict
       {{"index": 1, "category": "Shopping"}}
     ]
     """
+    response_text = ""
     try:
         response_text = call_gemini_with_retry(prompt, response_json=True)
         # Parse output
@@ -85,10 +88,13 @@ def classify_transactions_batch(transactions: List[Dict[str, Any]]) -> List[Dict
                 "index": int(item.get("index")),
                 "category": cat
             })
-        return validated_results
+        return validated_results, response_text
     except Exception as e:
         logger.error(f"Failed to classify batch via LLM: {str(e)}. Falling back to rules-based classifier.")
-        return mock_classify(transactions, valid_categories)
+        fallback_msg = f"Rules-based fallback due to error: {str(e)}"
+        if response_text:
+            fallback_msg += f" | Raw Response: {response_text}"
+        return mock_classify(transactions, valid_categories), fallback_msg
 
 def generate_narrative_summary(summary_input: Dict[str, Any]) -> Dict[str, Any]:
     """

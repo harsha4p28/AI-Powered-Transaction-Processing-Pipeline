@@ -175,12 +175,13 @@ def process_job_data(db: Session, job: Job, csv_content: str):
         batch = uncategorized_items[i:i+batch_size]
         try:
             logger.info(f"Classifying batch of size {len(batch)}")
-            classifications = classify_transactions_batch(batch)
+            classifications, raw_response = classify_transactions_batch(batch)
             for res in classifications:
                 idx = res["index"]
                 category = res["category"]
                 cleaned_rows[idx]["llm_category"] = category
                 cleaned_rows[idx]["category"] = category
+                cleaned_rows[idx]["llm_raw_response"] = raw_response
         except Exception as e:
             logger.error(f"Failed to process batch classification: {str(e)}")
             # Default fallback for this batch
@@ -189,6 +190,7 @@ def process_job_data(db: Session, job: Job, csv_content: str):
                 cleaned_rows[idx]["llm_category"] = "Other"
                 cleaned_rows[idx]["category"] = "Other"
                 cleaned_rows[idx]["llm_failed"] = True
+                cleaned_rows[idx]["llm_raw_response"] = f"Failed batch processing: {str(e)}"
 
     # 4. LLM Narrative Summary
     # Calculate spends (SUCCESS only for actual spend, or overall? Let's use SUCCESS transactions for spend statistics)
@@ -252,6 +254,7 @@ def process_job_data(db: Session, job: Job, csv_content: str):
             is_anomaly=r["is_anomaly"],
             anomaly_reason=r["anomaly_reason"],
             llm_category=r.get("llm_category"),
+            llm_raw_response=r.get("llm_raw_response"),
             llm_failed=r.get("llm_failed", False),
             notes=r["notes"]
         )

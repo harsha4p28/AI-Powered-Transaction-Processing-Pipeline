@@ -111,9 +111,21 @@ def get_job_results(job_id: UUID, db: Session = Depends(get_db)):
 
     transactions = db.query(Transaction).filter(Transaction.job_id == job_id).all()
     
+    # Calculate category spend breakdown (only for SUCCESS status transactions)
+    category_spend_breakdown = {}
+    for tx in transactions:
+        if tx.status == "SUCCESS" and tx.amount is not None:
+            cat = tx.category or "Uncategorised"
+            curr = tx.currency or "INR"
+            amt = tx.amount
+            if cat not in category_spend_breakdown:
+                category_spend_breakdown[cat] = {}
+            category_spend_breakdown[cat][curr] = category_spend_breakdown[cat].get(curr, 0) + amt
+
     return {
         "job": job,
-        "transactions": transactions
+        "transactions": transactions,
+        "category_spend_breakdown": category_spend_breakdown
     }
 
 
